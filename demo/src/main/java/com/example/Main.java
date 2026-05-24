@@ -13,12 +13,15 @@ import javafx.stage.Stage;
 import javax.sound.sampled.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 
 import java.io.*;
 import java.util.ArrayList;
 
 public class Main extends Application
 {
+    private boolean hardMode = false;
+
     private Circle powerUp;
     private boolean hasShield = false;
     private int shieldTimer = 0;
@@ -36,7 +39,8 @@ public class Main extends Application
     private Label scoreLabel;
     private ListView<String> highScores;
 
-    private final String FILE_NAME = "score.txt";
+    private final String NORMAL_FILE = "score.txt";
+    private final String HARD_FILE = "hard_score.txt";
 
     private int frameCounter = 0;
     private AnimationTimer timer;
@@ -46,7 +50,6 @@ public class Main extends Application
 
     private double pipeSpeed = 2.0;
     private double gapSize = 160;
-
     private int spawnRate = 180;
     private int pipesPassed = 0;
 
@@ -56,7 +59,6 @@ public class Main extends Application
     {
         Rectangle top;
         Rectangle bottom;
-
         double baseY;
         double offset = 0;
         boolean moving;
@@ -81,10 +83,7 @@ public class Main extends Application
     public void start(Stage stage)
     {
         gamePane = new Pane();
-
-        gamePane.setMinHeight(400);
         gamePane.setPrefHeight(400);
-        gamePane.setMaxHeight(400);
 
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(gamePane.widthProperty());
@@ -98,6 +97,10 @@ public class Main extends Application
         Button startButton = new Button("Start Game");
         Button resetButton = new Button("Reset Leaderboard");
         Button instructionsButton = new Button("How to Play");
+        Button modeButton = new Button("Normal Mode");
+
+        HBox row1 = new HBox(10, startButton, modeButton);
+        HBox row2 = new HBox(10, instructionsButton, resetButton);
 
         TextField nameField = new TextField();
         nameField.setPromptText("Enter Name");
@@ -105,7 +108,7 @@ public class Main extends Application
         highScores = new ListView<>();
         highScores.setPrefHeight(150);
 
-        Label leaderboardTitle = new Label("Leaderboard");
+        Label leaderboardTitle = new Label("Normal Leaderboard");
 
         loadScores();
 
@@ -113,11 +116,27 @@ public class Main extends Application
         resetButton.setOnAction(e -> clearScores());
         instructionsButton.setOnAction(e -> showInstructions());
 
+        modeButton.setOnAction(e -> {
+            hardMode = !hardMode;
+
+            if (hardMode)
+            {
+                modeButton.setText("Hard Mode");
+                leaderboardTitle.setText("Hard Mode Leaderboard");
+            }
+            else
+            {
+                modeButton.setText("Normal Mode");
+                leaderboardTitle.setText("Normal Leaderboard");
+            }
+
+            loadScores();
+        });
+
         VBox root = new VBox(10,
                 nameField,
-                startButton,
-                instructionsButton,
-                resetButton,
+                row1,
+                row2,
                 scoreLabel,
                 leaderboardTitle,
                 highScores,
@@ -132,12 +151,12 @@ public class Main extends Application
 
         gamePane.setOnKeyPressed(e -> {
             if (!gameStarted) gameStarted = true;
-            velocity = -5;
+            velocity = hardMode ? -4.5 : -5;
         });
 
         gamePane.setOnMouseClicked(e -> {
             if (!gameStarted) gameStarted = true;
-            velocity = -5;
+            velocity = hardMode ? -4.5 : -5;
         });
 
         stage.setScene(scene);
@@ -171,9 +190,18 @@ public class Main extends Application
         shieldTimer = 0;
         invincibilityTimer = 0;
 
-        pipeSpeed = 2.0;
-        gapSize = 160;
-        spawnRate = 180;
+        if (hardMode)
+        {
+            pipeSpeed = 2.5;
+            spawnRate = 100;
+            gapSize = 120;
+        }
+        else
+        {
+            pipeSpeed = 2.0;
+            spawnRate = 180;
+            gapSize = 160;
+        }
 
         pane.requestFocus();
 
@@ -195,36 +223,46 @@ public class Main extends Application
 
         if (gameStarted)
         {
-            velocity += 0.17;
+            velocity += hardMode ? 0.25 : 0.17;
             bird.setCenterY(bird.getCenterY() + velocity);
         }
 
         double paneHeight = pane.getHeight();
         double paneWidth = pane.getWidth();
 
-        // POWERUP SPAWN
-        if (powerUp == null && Math.random() < 0.001)
+        // SPAWN PIPES
+        if (frameCounter % spawnRate == 0)
         {
-            double spawnY;
+            double gapStart = 50 + Math.random() * (paneHeight - gapSize - 100);
 
-            if (!pipes.isEmpty())
-            {
-                PipePair lastPipe = pipes.get(pipes.size() - 1);
-                double gapTop = lastPipe.bottom.getY() - gapSize;
-                spawnY = gapTop + 20 + Math.random() * (gapSize - 40);
-            }
-            else
-            {
-                spawnY = 100 + Math.random() * (paneHeight - 200);
-            }
+            Rectangle topPipe = new Rectangle(paneWidth, 0, 40, gapStart);
+            Rectangle bottomPipe = new Rectangle(
+                    paneWidth,
+                    gapStart + gapSize,
+                    40,
+                    paneHeight - (gapStart + gapSize)
+            );
 
-            powerUp = new Circle(10);
-            powerUp.setCenterX(paneWidth);
-            powerUp.setCenterY(spawnY);
-            powerUp.setStyle("-fx-fill: gold;");
-            pane.getChildren().add(powerUp);
+            boolean move = score >= 10 && Math.random() < (hardMode ? 0.6 : 0.3);
+
+            PipePair pair = new PipePair(topPipe, bottomPipe, gapStart, move);
+            pipes.add(pair);
+            pane.getChildren().addAll(topPipe, bottomPipe);
+
+            // SPAWN POWERUP INSIDE GAP
+            if (powerUp == null && Math.random() < 0.2)
+            {
+                double spawnY = gapStart + 20 + Math.random() * (gapSize - 40);
+
+                powerUp = new Circle(10);
+                powerUp.setCenterX(paneWidth);
+                powerUp.setCenterY(spawnY);
+                powerUp.setStyle("-fx-fill: gold;");
+                pane.getChildren().add(powerUp);
+            }
         }
 
+        // POWERUP MOVEMENT
         if (powerUp != null)
         {
             powerUp.setCenterX(powerUp.getCenterX() - pipeSpeed);
@@ -232,7 +270,7 @@ public class Main extends Application
             if (powerUp.getBoundsInParent().intersects(bird.getBoundsInParent()))
             {
                 hasShield = true;
-                shieldTimer = 200;
+                shieldTimer = 220;
 
                 pane.getChildren().remove(powerUp);
                 powerUp = null;
@@ -249,10 +287,7 @@ public class Main extends Application
         if (hasShield)
         {
             shieldTimer--;
-            if (shieldTimer <= 0)
-            {
-                hasShield = false;
-            }
+            if (shieldTimer <= 0) hasShield = false;
         }
 
         if (invincibilityTimer > 0)
@@ -260,7 +295,7 @@ public class Main extends Application
             invincibilityTimer--;
         }
 
-        // COLOR / FLASH
+        // FLASH EFFECT
         if (hasShield)
         {
             bird.setStyle("-fx-fill: cyan;");
@@ -277,27 +312,7 @@ public class Main extends Application
             bird.setStyle("");
         }
 
-        // SPAWN PIPES
-        if (frameCounter % spawnRate == 0)
-        {
-            double gapStart = 50 + Math.random() * (paneHeight - gapSize - 100);
-
-            Rectangle topPipe = new Rectangle(paneWidth, 0, 40, gapStart);
-            Rectangle bottomPipe = new Rectangle(
-                    paneWidth,
-                    gapStart + gapSize,
-                    40,
-                    paneHeight - (gapStart + gapSize)
-            );
-
-            boolean move = score >= 20 && Math.random() < 0.3;
-
-            PipePair pair = new PipePair(topPipe, bottomPipe, gapStart, move);
-            pipes.add(pair);
-            pane.getChildren().addAll(topPipe, bottomPipe);
-        }
-
-        // MOVE + COLLISION
+        // MOVE PIPES
         for (int i = 0; i < pipes.size(); i++)
         {
             PipePair pair = pipes.get(i);
@@ -313,6 +328,7 @@ public class Main extends Application
                 pair.bottom.setY(newY + gapSize);
             }
 
+            // COLLISION
             if (pair.top.getBoundsInParent().intersects(bird.getBoundsInParent()) ||
                 pair.bottom.getBoundsInParent().intersects(bird.getBoundsInParent()))
             {
@@ -333,6 +349,7 @@ public class Main extends Application
                 }
             }
 
+            // SCORE
             if (pair.top.getX() + pair.top.getWidth() < bird.getCenterX())
             {
                 if (pair.top.getProperties().get("scored") == null)
@@ -340,7 +357,7 @@ public class Main extends Application
                     pair.top.getProperties().put("scored", true);
                     pipesPassed++;
 
-                    if (pipesPassed % 1 == 0)
+                    if (pipesPassed % 2 == 0)
                     {
                         score++;
                         scoreLabel.setText("Score: " + score);
@@ -349,6 +366,7 @@ public class Main extends Application
             }
         }
 
+        // REMOVE PIPES
         pipes.removeIf(pair -> {
             boolean remove = pair.top.getX() < -50;
             if (remove)
@@ -382,6 +400,89 @@ public class Main extends Application
 
         loadScores();
         scoreLabel.setText("Game Over! Score: " + score);
+    }
+
+    private String getCurrentFile()
+    {
+        return hardMode ? HARD_FILE : NORMAL_FILE;
+    }
+
+    private void saveScore(String name, int newScore)
+    {
+        ArrayList<String> scores = new ArrayList<>();
+        boolean playerExists = false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(getCurrentFile())))
+        {
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                String[] parts = line.split(": ");
+                String existingName = parts[0];
+                int existingScore = Integer.parseInt(parts[1]);
+
+                if (existingName.equalsIgnoreCase(name))
+                {
+                    playerExists = true;
+                    scores.add(name + ": " + Math.max(existingScore, newScore));
+                }
+                else
+                {
+                    scores.add(line);
+                }
+            }
+        }
+        catch (IOException ignored) {}
+
+        if (!playerExists)
+        {
+            scores.add(name + ": " + newScore);
+        }
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(getCurrentFile())))
+        {
+            for (String s : scores)
+            {
+                writer.println(s);
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadScores()
+    {
+        ArrayList<String> scores = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(getCurrentFile())))
+        {
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                scores.add(line);
+            }
+        }
+        catch (IOException ignored) {}
+
+        scores.sort((a, b) ->
+            Integer.parseInt(b.split(": ")[1]) -
+            Integer.parseInt(a.split(": ")[1])
+        );
+
+        highScores.getItems().setAll(scores);
+    }
+
+    private void clearScores()
+    {
+        try (PrintWriter writer = new PrintWriter(getCurrentFile()))
+        {
+            writer.print("");
+        }
+        catch (IOException ignored) {}
+
+        highScores.getItems().clear();
     }
 
     private void playMusic()
@@ -437,7 +538,6 @@ public class Main extends Application
             deathGif.setY(bird.getCenterY() - 100);
 
             gamePane.getChildren().add(deathGif);
-            deathGif.toFront();
 
             javafx.animation.PauseTransition delay =
                 new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
@@ -458,17 +558,13 @@ public class Main extends Application
 
         Label instructions = new Label(
             "HOW TO PLAY:\n\n" +
-            "- Click or press a key to make the bird jump\n" +
-            "- Avoid hitting pipes or the ground\n" +
-            "- Each pipe you pass gives you points\n\n" +
-
-            "POWER-UPS:\n\n" +
+            "- Click or press to jump\n" +
+            "- Avoid pipes\n" +
+            "- Score by passing pipes\n\n" +
+            "POWER-UP:\n\n" +
             "- Gold circle = Shield\n" +
-            "- Lets you survive one pipe hit\n" +
-            "- Destroys the pipe you hit\n" +
-            "- Gives brief invincibility after\n\n" 
-
-            
+            "- Blocks one hit\n" +
+            "- Destroys pipe + invincibility\n"
         );
 
         instructions.setWrapText(true);
@@ -477,100 +573,7 @@ public class Main extends Application
         layout.setStyle("-fx-padding: 20;");
 
         Scene scene = new Scene(layout, 350, 300);
-
         window.setScene(scene);
         window.show();
-    }
-
-    private void saveScore(String name, int newScore)
-    {
-        ArrayList<String> scores = new ArrayList<>();
-        boolean playerExists = false;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_NAME)))
-        {
-            String line;
-            while ((line = reader.readLine()) != null)
-            {
-                String[] parts = line.split(": ");
-                String existingName = parts[0];
-                int existingScore = Integer.parseInt(parts[1]);
-
-                if (existingName.equalsIgnoreCase(name))
-                {
-                    playerExists = true;
-
-                    if (newScore > existingScore)
-                        scores.add(name + ": " + newScore);
-                    else
-                        scores.add(line);
-                }
-                else
-                {
-                    scores.add(line);
-                }
-            }
-        }
-        catch (IOException e)
-        {
-            System.out.println("No existing scores.");
-        }
-
-        if (!playerExists)
-        {
-            scores.add(name + ": " + newScore);
-        }
-
-        try (PrintWriter writer = new PrintWriter(new FileWriter(FILE_NAME)))
-        {
-            for (String s : scores)
-            {
-                writer.println(s);
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-    private void clearScores()
-    {
-        try (PrintWriter writer = new PrintWriter(FILE_NAME))
-        {
-            writer.print("");
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        highScores.getItems().clear();
-    }
-
-    private void loadScores()
-    {
-        ArrayList<String> scores = new ArrayList<>();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_NAME)))
-        {
-            String line;
-            while ((line = reader.readLine()) != null)
-            {
-                scores.add(line);
-            }
-        }
-        catch (IOException e)
-        {
-            System.out.println("No scores yet.");
-        }
-
-        scores.sort((a, b) -> {
-            int sa = Integer.parseInt(a.split(": ")[1]);
-            int sb = Integer.parseInt(b.split(": ")[1]);
-            return sb - sa;
-        });
-
-        highScores.getItems().setAll(scores);
     }
 }
