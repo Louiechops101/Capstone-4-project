@@ -97,6 +97,7 @@ public class Main extends Application
 
         Button startButton = new Button("Start Game");
         Button resetButton = new Button("Reset Leaderboard");
+        Button instructionsButton = new Button("How to Play");
 
         TextField nameField = new TextField();
         nameField.setPromptText("Enter Name");
@@ -110,10 +111,12 @@ public class Main extends Application
 
         startButton.setOnAction(e -> startGame(gamePane, nameField.getText()));
         resetButton.setOnAction(e -> clearScores());
+        instructionsButton.setOnAction(e -> showInstructions());
 
         VBox root = new VBox(10,
                 nameField,
                 startButton,
+                instructionsButton,
                 resetButton,
                 scoreLabel,
                 leaderboardTitle,
@@ -448,7 +451,36 @@ public class Main extends Application
         }
     }
 
+    private void showInstructions()
+    {
+        Stage window = new Stage();
+        window.setTitle("How to Play");
 
+        Label instructions = new Label(
+            "HOW TO PLAY:\n\n" +
+            "- Click or press a key to make the bird jump\n" +
+            "- Avoid hitting pipes or the ground\n" +
+            "- Each pipe you pass gives you points\n\n" +
+
+            "POWER-UPS:\n\n" +
+            "- Gold circle = Shield\n" +
+            "- Lets you survive one pipe hit\n" +
+            "- Destroys the pipe you hit\n" +
+            "- Gives brief invincibility after\n\n" 
+
+            
+        );
+
+        instructions.setWrapText(true);
+
+        VBox layout = new VBox(15, instructions);
+        layout.setStyle("-fx-padding: 20;");
+
+        Scene scene = new Scene(layout, 350, 300);
+
+        window.setScene(scene);
+        window.show();
+    }
 
     private void saveScore(String name, int newScore)
     {
