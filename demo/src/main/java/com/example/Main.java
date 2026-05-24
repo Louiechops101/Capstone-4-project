@@ -415,7 +415,7 @@ public class Main extends Application
     {
         try
         {
-            Image gif = new Image("file:death.gif");
+           Image gif = new Image("file:death.gif");
 
             deathGif = new ImageView(gif);
             deathGif.setFitWidth(200);
