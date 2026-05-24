@@ -19,6 +19,13 @@ import java.util.ArrayList;
 
 public class Main extends Application
 {
+    private Circle powerUp;
+    private boolean hasShield = false;
+    private int shieldTimer = 0;
+    private int invincibilityTimer = 0;
+
+    private Clip backgroundMusic;
+
     private Circle bird;
     private double velocity = 0;
 
@@ -45,7 +52,6 @@ public class Main extends Application
 
     private Pane gamePane;
 
-   
     class PipePair
     {
         Rectangle top;
@@ -76,12 +82,10 @@ public class Main extends Application
     {
         gamePane = new Pane();
 
-        
         gamePane.setMinHeight(400);
         gamePane.setPrefHeight(400);
         gamePane.setMaxHeight(400);
 
-        
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(gamePane.widthProperty());
         clip.heightProperty().bind(gamePane.heightProperty());
@@ -140,10 +144,10 @@ public class Main extends Application
 
     private void startGame(Pane pane, String playerName)
     {
-        if (timer != null)
-        {
-            timer.stop();
-        }
+        if (timer != null) timer.stop();
+
+        stopMusic();
+        playMusic();
 
         gameStarted = false;
         isGameOver = false;
@@ -159,6 +163,10 @@ public class Main extends Application
         score = 0;
         frameCounter = 0;
         pipesPassed = 0;
+
+        hasShield = false;
+        shieldTimer = 0;
+        invincibilityTimer = 0;
 
         pipeSpeed = 2.0;
         gapSize = 160;
@@ -191,13 +199,87 @@ public class Main extends Application
         double paneHeight = pane.getHeight();
         double paneWidth = pane.getWidth();
 
-        // SPAWN
+        // POWERUP SPAWN
+        if (powerUp == null && Math.random() < 0.001)
+        {
+            double spawnY;
+
+            if (!pipes.isEmpty())
+            {
+                PipePair lastPipe = pipes.get(pipes.size() - 1);
+                double gapTop = lastPipe.bottom.getY() - gapSize;
+                spawnY = gapTop + 20 + Math.random() * (gapSize - 40);
+            }
+            else
+            {
+                spawnY = 100 + Math.random() * (paneHeight - 200);
+            }
+
+            powerUp = new Circle(10);
+            powerUp.setCenterX(paneWidth);
+            powerUp.setCenterY(spawnY);
+            powerUp.setStyle("-fx-fill: gold;");
+            pane.getChildren().add(powerUp);
+        }
+
+        if (powerUp != null)
+        {
+            powerUp.setCenterX(powerUp.getCenterX() - pipeSpeed);
+
+            if (powerUp.getBoundsInParent().intersects(bird.getBoundsInParent()))
+            {
+                hasShield = true;
+                shieldTimer = 200;
+
+                pane.getChildren().remove(powerUp);
+                powerUp = null;
+            }
+
+            if (powerUp != null && powerUp.getCenterX() < -20)
+            {
+                pane.getChildren().remove(powerUp);
+                powerUp = null;
+            }
+        }
+
+        // TIMERS
+        if (hasShield)
+        {
+            shieldTimer--;
+            if (shieldTimer <= 0)
+            {
+                hasShield = false;
+            }
+        }
+
+        if (invincibilityTimer > 0)
+        {
+            invincibilityTimer--;
+        }
+
+        // COLOR / FLASH
+        if (hasShield)
+        {
+            bird.setStyle("-fx-fill: cyan;");
+        }
+        else if (invincibilityTimer > 0)
+        {
+            if (invincibilityTimer % 10 < 5)
+                bird.setStyle("-fx-fill: white;");
+            else
+                bird.setStyle("-fx-fill: cyan;");
+        }
+        else
+        {
+            bird.setStyle("");
+        }
+
+        // SPAWN PIPES
         if (frameCounter % spawnRate == 0)
         {
             double gapStart = 50 + Math.random() * (paneHeight - gapSize - 100);
 
             Rectangle topPipe = new Rectangle(paneWidth, 0, 40, gapStart);
-
             Rectangle bottomPipe = new Rectangle(
                     paneWidth,
                     gapStart + gapSize,
@@ -208,23 +290,22 @@ public class Main extends Application
             boolean move = score >= 20 && Math.random() < 0.3;
 
             PipePair pair = new PipePair(topPipe, bottomPipe, gapStart, move);
-
             pipes.add(pair);
             pane.getChildren().addAll(topPipe, bottomPipe);
         }
 
-       
-        for (PipePair pair : pipes)
+        // MOVE + COLLISION
+        for (int i = 0; i < pipes.size(); i++)
         {
+            PipePair pair = pipes.get(i);
+
             pair.top.setX(pair.top.getX() - pipeSpeed);
             pair.bottom.setX(pair.bottom.getX() - pipeSpeed);
 
             if (pair.moving)
             {
                 pair.offset += 0.03;
-
                 double newY = pair.baseY + Math.sin(pair.offset) * 15;
-
                 pair.top.setY(newY - pair.top.getHeight());
                 pair.bottom.setY(newY + gapSize);
             }
@@ -232,8 +313,21 @@ public class Main extends Application
             if (pair.top.getBoundsInParent().intersects(bird.getBoundsInParent()) ||
                 pair.bottom.getBoundsInParent().intersects(bird.getBoundsInParent()))
             {
-                gameOver(playerName);
-                return;
+                if (hasShield || invincibilityTimer > 0)
+                {
+                    hasShield = false;
+                    invincibilityTimer = 120;
+
+                    pane.getChildren().removeAll(pair.top, pair.bottom);
+                    pipes.remove(i);
+                    i--;
+                    continue;
+                }
+                else
+                {
+                    gameOver(playerName);
+                    return;
+                }
             }
 
             if (pair.top.getX() + pair.top.getWidth() < bird.getCenterX())
@@ -241,7 +335,6 @@ public class Main extends Application
                 if (pair.top.getProperties().get("scored") == null)
                 {
                     pair.top.getProperties().put("scored", true);
-
                     pipesPassed++;
 
                     if (pipesPassed % 1 == 0)
@@ -253,19 +346,15 @@ public class Main extends Application
             }
         }
 
-        
         pipes.removeIf(pair -> {
             boolean remove = pair.top.getX() < -50;
-
             if (remove)
             {
                 pane.getChildren().removeAll(pair.top, pair.bottom);
             }
-
             return remove;
         });
 
-        
         if (bird.getCenterY() > paneHeight || bird.getCenterY() < 0)
         {
             gameOver(playerName);
@@ -274,18 +363,14 @@ public class Main extends Application
 
     private void gameOver(String playerName)
     {
-        playDeathSound();
-
-        showDeathGif();
-        playDeathSound();
-
         if (isGameOver) return;
         isGameOver = true;
 
-        if (timer != null)
-        {
-            timer.stop();
-        }
+        stopMusic();
+        playDeathSound();
+        showDeathGif();
+
+        if (timer != null) timer.stop();
 
         if (playerName != null && !playerName.trim().isEmpty())
         {
@@ -295,6 +380,75 @@ public class Main extends Application
         loadScores();
         scoreLabel.setText("Game Over! Score: " + score);
     }
+
+    private void playMusic()
+    {
+        try
+        {
+            AudioInputStream audio = AudioSystem.getAudioInputStream(new File("Save your grace.wav"));
+            backgroundMusic = AudioSystem.getClip();
+            backgroundMusic.open(audio);
+            backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
+        }
+        catch (Exception e)
+        {
+            System.out.println("Music error: " + e.getMessage());
+        }
+    }
+
+    private void stopMusic()
+    {
+        if (backgroundMusic != null)
+        {
+            backgroundMusic.stop();
+            backgroundMusic.close();
+        }
+    }
+
+    private void playDeathSound()
+    {
+        try
+        {
+            AudioInputStream audio = AudioSystem.getAudioInputStream(new File("death.wav"));
+            Clip clip = AudioSystem.getClip();
+            clip.open(audio);
+            clip.start();
+        }
+        catch (Exception e)
+        {
+            System.out.println("Sound error: " + e.getMessage());
+        }
+    }
+
+    private void showDeathGif()
+    {
+        try
+        {
+            Image gif = new Image("file:death.gif");
+
+            deathGif = new ImageView(gif);
+            deathGif.setFitWidth(200);
+            deathGif.setFitHeight(200);
+
+            deathGif.setX(bird.getCenterX() - 100);
+            deathGif.setY(bird.getCenterY() - 100);
+
+            gamePane.getChildren().add(deathGif);
+            deathGif.toFront();
+
+            javafx.animation.PauseTransition delay =
+                new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+
+            delay.setOnFinished(e -> gamePane.getChildren().remove(deathGif));
+            delay.play();
+        }
+        catch (Exception e)
+        {
+            System.out.println("GIF error: " + e.getMessage());
+        }
+    }
+
+
 
     private void saveScore(String name, int newScore)
     {
@@ -315,13 +469,9 @@ public class Main extends Application
                     playerExists = true;
 
                     if (newScore > existingScore)
-                    {
                         scores.add(name + ": " + newScore);
-                    }
                     else
-                    {
                         scores.add(line);
-                    }
                 }
                 else
                 {
@@ -383,59 +533,12 @@ public class Main extends Application
             System.out.println("No scores yet.");
         }
 
-        scores.sort((a, b) ->
-        {
+        scores.sort((a, b) -> {
             int sa = Integer.parseInt(a.split(": ")[1]);
             int sb = Integer.parseInt(b.split(": ")[1]);
             return sb - sa;
         });
 
         highScores.getItems().setAll(scores);
-    }
-
-    private void playDeathSound()
-    {
-        try
-        {
-            File file = new File("death.wav");
-           System.out.println("Looking for: " + file.getAbsolutePath());
-
-            AudioInputStream audio = AudioSystem.getAudioInputStream(file);
-            Clip clip = AudioSystem.getClip();
-            clip.open(audio);
-            clip.start();
-        }
-        catch (Exception e)
-        {
-            System.out.println("Sound error: " + e.getMessage());
-        }
-    }
-
-    private void showDeathGif()
-    {
-        try
-        {
-           Image gif = new Image("file:death.gif");
-
-            deathGif = new ImageView(gif);
-            deathGif.setFitWidth(200);
-            deathGif.setFitHeight(200);
-
-            deathGif.setX(bird.getCenterX() - 100);
-            deathGif.setY(bird.getCenterY() - 100);
-
-            gamePane.getChildren().add(deathGif);
-            deathGif.toFront();
-
-       
-            javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
-
-            delay.setOnFinished(e -> gamePane.getChildren().remove(deathGif));
-            delay.play();
-        }
-        catch (Exception e)
-        {
-            System.out.println("GIF error: " + e.getMessage());
-        }
     }
 }
