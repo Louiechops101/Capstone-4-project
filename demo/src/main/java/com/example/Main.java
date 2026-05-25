@@ -20,68 +20,128 @@ import java.util.ArrayList;
 
 public class Main extends Application
 {
+
+    /** Indicates whether hard mode is enabled */
     private boolean hardMode = false;
 
+    /** Power-up object (shield) */
     private Circle powerUp;
+
+    /** Whether the player currently has a shield */
     private boolean hasShield = false;
+
+    /** Duration remaining for shield */
     private int shieldTimer = 0;
+
+    /** Duration remaining for invincibility after shield hit */
     private int invincibilityTimer = 0;
 
+    /** Background music clip */
     private Clip backgroundMusic;
 
+    /** Player character */
     private Circle bird;
+
+    /** Vertical velocity of the bird */
     private double velocity = 0;
 
+    /** Death animation GIF */
     private ImageView deathGif;
 
+    /** Current score */
     private int score = 0;
 
+    /** Score label UI */
     private Label scoreLabel;
+
+    /** Leaderboard UI */
     private ListView<String> highScores;
 
+    /** File for normal mode scores */
     private final String NORMAL_FILE = "score.txt";
+
+    /** File for hard mode scores */
     private final String HARD_FILE = "hard_score.txt";
 
+    /** Frame counter for timing events */
     private int frameCounter = 0;
+
+    /** Game loop timer */
     private AnimationTimer timer;
 
+    /** Whether the game has started */
     private boolean gameStarted = false;
+
+    /** Whether the game is over */
     private boolean isGameOver = false;
 
+    /** Speed of pipes */
     private double pipeSpeed = 2.0;
+
+    /** Gap size between pipes */
     private double gapSize = 160;
+
+    /** Rate at which pipes spawn */
     private int spawnRate = 180;
+
+    /** Number of pipes passed */
     private int pipesPassed = 0;
 
+    /** Main game pane */
     private Pane gamePane;
 
+    
+    private Image pipeBottomImage;
+
+
+     /**
+     * Represents a pair of pipes (top and bottom).
+     * Can optionally move vertically.
+     */
     class PipePair
     {
-        Rectangle top;
-        Rectangle bottom;
+        ImageView top;
+        ImageView bottom;
+
+        Rectangle topHitbox;
+        Rectangle bottomHitbox;
+
         double baseY;
         double offset = 0;
         boolean moving;
 
-        PipePair(Rectangle top, Rectangle bottom, double baseY, boolean moving)
-        {
-            this.top = top;
-            this.bottom = bottom;
-            this.baseY = baseY;
-            this.moving = moving;
-        }
+    PipePair(ImageView top, ImageView bottom, Rectangle topHitbox, Rectangle bottomHitbox, double baseY, boolean moving)
+    {
+        this.top = top;
+        this.bottom = bottom;
+        this.topHitbox = topHitbox;
+        this.bottomHitbox = bottomHitbox;
+        this.baseY = baseY;
+        this.moving = moving;
     }
-
+}
+     /** List of active pipes */
     private ArrayList<PipePair> pipes = new ArrayList<>();
 
+    /**
+     * Launches the JavaFX application.
+     */
     public static void main(String[] args)
     {
         launch(args);
     }
-
-    @Override
+     
+    /**
+     * Initializes the UI and sets up event handlers.
+     *
+     * @param stage Primary application stage
+     */
+     @Override
     public void start(Stage stage)
     {
+        
+        pipeBottomImage = new Image(getClass().getResource("/com/example/pipe_bottom.png").toExternalForm());
+
         gamePane = new Pane();
         gamePane.setPrefHeight(400);
 
@@ -93,11 +153,15 @@ public class Main extends Application
         bird = new Circle(50, 200, 15);
 
         scoreLabel = new Label("Score: 0");
+        scoreLabel.setId("scoreLabel");
 
         Button startButton = new Button("Start Game");
         Button resetButton = new Button("Reset Leaderboard");
         Button instructionsButton = new Button("How to Play");
         Button modeButton = new Button("Normal Mode");
+
+        modeButton.setId("modeButton");
+        resetButton.setId("resetButton");
 
         HBox row1 = new HBox(10, startButton, modeButton);
         HBox row2 = new HBox(10, instructionsButton, resetButton);
@@ -146,6 +210,7 @@ public class Main extends Application
         VBox.setVgrow(gamePane, Priority.ALWAYS);
 
         Scene scene = new Scene(root, 500, 700);
+        scene.getStylesheets().add(getClass().getResource("style.css").toExternalForm());
 
         gamePane.setFocusTraversable(true);
 
@@ -164,6 +229,12 @@ public class Main extends Application
         stage.show();
     }
 
+    /**
+     * Starts a new game session.
+     *
+     * @param pane Game pane
+     * @param playerName Player's name for leaderboard
+     */
     private void startGame(Pane pane, String playerName)
     {
         if (timer != null) timer.stop();
@@ -217,6 +288,14 @@ public class Main extends Application
         timer.start();
     }
 
+
+      /**
+     * Updates the game each frame.
+     *  Handles movement, gravity, pipe spawning, collisions, scoring, power-ups, and game-over conditions.
+     *
+     * @param pane the game pane where objects are displayed
+     * @param playerName the current player's name
+     */
     private void update(Pane pane, String playerName)
     {
         frameCounter++;
@@ -233,33 +312,66 @@ public class Main extends Application
         // SPAWN PIPES
         if (frameCounter % spawnRate == 0)
         {
-            double gapStart = 50 + Math.random() * (paneHeight - gapSize - 100);
+            double gapStart = 20 + Math.random() * (paneHeight - gapSize - 40);
 
-            Rectangle topPipe = new Rectangle(paneWidth, 0, 40, gapStart);
-            Rectangle bottomPipe = new Rectangle(
-                    paneWidth,
-                    gapStart + gapSize,
-                    40,
-                    paneHeight - (gapStart + gapSize)
-            );
+            double pipeWidth = 80; 
+
+            
+            ImageView topPipe = new ImageView(pipeBottomImage);
+            ImageView bottomPipe = new ImageView(pipeBottomImage);
+
+      
+            topPipe.setPreserveRatio(false);
+            bottomPipe.setPreserveRatio(false);
+
+           
+            topPipe.setFitWidth(pipeWidth);
+            bottomPipe.setFitWidth(pipeWidth);
+
+         
+            double topHeight = gapStart;
+            double bottomHeight = paneHeight - (gapStart + gapSize);
+
+           
+            topPipe.setFitHeight(topHeight);
+            bottomPipe.setFitHeight(bottomHeight);
+
+         
+            topPipe.setX(paneWidth);
+            topPipe.setY(0);
+
+            bottomPipe.setX(paneWidth);
+            bottomPipe.setY(gapStart + gapSize);
+
+            
+            topPipe.setScaleY(-1);
+            topPipe.setY(topHeight);
+            topPipe.setY(0);
+
+            
+            Rectangle topHitbox = new Rectangle();
+            topHitbox.widthProperty().bind(topPipe.fitWidthProperty());
+            topHitbox.heightProperty().bind(topPipe.fitHeightProperty());
+            topHitbox.xProperty().bind(topPipe.xProperty());
+            topHitbox.yProperty().bind(topPipe.yProperty());
+
+            Rectangle bottomHitbox = new Rectangle();
+            bottomHitbox.widthProperty().bind(bottomPipe.fitWidthProperty());
+            bottomHitbox.heightProperty().bind(bottomPipe.fitHeightProperty());
+            bottomHitbox.xProperty().bind(bottomPipe.xProperty());
+            bottomHitbox.yProperty().bind(bottomPipe.yProperty());
 
             boolean move = score >= 10 && Math.random() < (hardMode ? 0.6 : 0.3);
 
-            PipePair pair = new PipePair(topPipe, bottomPipe, gapStart, move);
+            PipePair pair = new PipePair(
+                topPipe, bottomPipe,
+                topHitbox, bottomHitbox,
+                gapStart, move
+            );
+
             pipes.add(pair);
+
             pane.getChildren().addAll(topPipe, bottomPipe);
-
-            // SPAWN POWERUP INSIDE GAP
-            if (powerUp == null && Math.random() < 0.2)
-            {
-                double spawnY = gapStart + 20 + Math.random() * (gapSize - 40);
-
-                powerUp = new Circle(10);
-                powerUp.setCenterX(paneWidth);
-                powerUp.setCenterY(spawnY);
-                powerUp.setStyle("-fx-fill: gold;");
-                pane.getChildren().add(powerUp);
-            }
         }
 
         // POWERUP MOVEMENT
@@ -320,17 +432,27 @@ public class Main extends Application
             pair.top.setX(pair.top.getX() - pipeSpeed);
             pair.bottom.setX(pair.bottom.getX() - pipeSpeed);
 
-            if (pair.moving)
-            {
-                pair.offset += 0.03;
-                double newY = pair.baseY + Math.sin(pair.offset) * 15;
-                pair.top.setY(newY - pair.top.getHeight());
-                pair.bottom.setY(newY + gapSize);
-            }
+            
+        if (pair.moving)
+        {
+            pair.offset += 0.03;
+
+            double gapY = pair.baseY + Math.sin(pair.offset) * 15;
+
+            double topHeight = gapY;
+            double bottomHeight = paneHeight - (gapY + gapSize);
+
+  
+            pair.top.setFitHeight(topHeight);
+            pair.top.setY(0);
+
+    
+            pair.bottom.setFitHeight(bottomHeight);
+            pair.bottom.setY(gapY + gapSize);
+        }
 
             // COLLISION
-            if (pair.top.getBoundsInParent().intersects(bird.getBoundsInParent()) ||
-                pair.bottom.getBoundsInParent().intersects(bird.getBoundsInParent()))
+            if (pair.topHitbox.getBoundsInParent().intersects(bird.getBoundsInParent())|| pair.bottomHitbox.getBoundsInParent().intersects(bird.getBoundsInParent()))
             {
                 if (hasShield || invincibilityTimer > 0)
                 {
@@ -350,14 +472,14 @@ public class Main extends Application
             }
 
             // SCORE
-            if (pair.top.getX() + pair.top.getWidth() < bird.getCenterX())
+            if (pair.top.getX() + pair.top.getFitWidth() < bird.getCenterX())
             {
                 if (pair.top.getProperties().get("scored") == null)
                 {
                     pair.top.getProperties().put("scored", true);
                     pipesPassed++;
 
-                    if (pipesPassed % 2 == 0)
+                    if (pipesPassed % 1 == 0)
                     {
                         score++;
                         scoreLabel.setText("Score: " + score);
@@ -382,6 +504,12 @@ public class Main extends Application
         }
     }
 
+     /**
+     * Handles game over state.
+     * Stops the game, plays effects, and saves score.
+     *
+     * @param playerName Player name
+     */
     private void gameOver(String playerName)
     {
         if (isGameOver) return;
@@ -402,11 +530,23 @@ public class Main extends Application
         scoreLabel.setText("Game Over! Score: " + score);
     }
 
+    /**
+     * Returns the correct score file depending on mode.
+     *
+     * @return File name for current mode
+     */
     private String getCurrentFile()
     {
         return hardMode ? HARD_FILE : NORMAL_FILE;
     }
 
+
+     /**
+     * Saves a player's score, keeping only their highest score.
+     *
+     * @param name Player name
+     * @param newScore Score to save
+     */
     private void saveScore(String name, int newScore)
     {
         ArrayList<String> scores = new ArrayList<>();
@@ -452,6 +592,9 @@ public class Main extends Application
         }
     }
 
+     /**
+     * Loads scores from file and updates leaderboard UI.
+     */
     private void loadScores()
     {
         ArrayList<String> scores = new ArrayList<>();
@@ -474,6 +617,9 @@ public class Main extends Application
         highScores.getItems().setAll(scores);
     }
 
+    /**
+     * Clears all saved scores.
+     */
     private void clearScores()
     {
         try (PrintWriter writer = new PrintWriter(getCurrentFile()))
@@ -485,6 +631,9 @@ public class Main extends Application
         highScores.getItems().clear();
     }
 
+    /**
+     * Plays looping background music.
+     */
     private void playMusic()
     {
         try
@@ -499,7 +648,9 @@ public class Main extends Application
             System.out.println("Music error: " + e.getMessage());
         }
     }
-
+    /**
+     * Stops background music if playing.
+     */
     private void stopMusic()
     {
         if (backgroundMusic != null)
@@ -509,6 +660,9 @@ public class Main extends Application
         }
     }
 
+     /**
+     * Plays the death sound effect.
+     */
     private void playDeathSound()
     {
         try
@@ -523,7 +677,10 @@ public class Main extends Application
             System.out.println("Sound error: " + e.getMessage());
         }
     }
-
+    
+    /**
+     * Displays the death animation GIF briefly.
+     */
     private void showDeathGif()
     {
         try
@@ -551,6 +708,9 @@ public class Main extends Application
         }
     }
 
+    /**
+     * Displays the instructions window.
+     */
     private void showInstructions()
     {
         Stage window = new Stage();
@@ -561,10 +721,17 @@ public class Main extends Application
             "- Click or press to jump\n" +
             "- Avoid pipes\n" +
             "- Score by passing pipes\n\n" +
+
             "POWER-UP:\n\n" +
             "- Gold circle = Shield\n" +
             "- Blocks one hit\n" +
-            "- Destroys pipe + invincibility\n"
+            "- Destroys pipe + invincibility\n\n" +
+
+            "HARD MODE:\n\n" +
+            "- Faster pipes\n" +
+            "- Less time to react\n" +
+            "- Smaller gaps\n" +
+            "- More moving obstacles\n"
         );
 
         instructions.setWrapText(true);
