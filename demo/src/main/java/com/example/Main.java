@@ -374,6 +374,20 @@ public class Main extends Application
             pane.getChildren().addAll(topPipe, bottomPipe);
         }
 
+        if (powerUp == null && Math.random() < 0.001) // ~random spawn chance
+        {
+    
+            powerUp = new Circle(10);
+            powerUp.setCenterX(pane.getWidth());
+
+            // spawn in safe vertical range
+            powerUp.setCenterY(50 + Math.random() * (paneHeight - 100));
+
+            powerUp.setStyle("-fx-fill: gold;");
+
+            gamePane.getChildren().add(powerUp);
+        }
+
         // POWERUP MOVEMENT
         if (powerUp != null)
         {
