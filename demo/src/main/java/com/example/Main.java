@@ -115,6 +115,16 @@ public class Main extends Application
         double offset = 0;
         boolean moving;
 
+    /**
+    * Constructs a PipePair.
+    *
+    * @param top Top pipe image
+    * @param bottom Bottom pipe image
+    * @param topHitbox Collision hitbox for top pipe
+    * @param bottomHitbox Collision hitbox for bottom pipe
+    * @param baseY Initial vertical gap position
+    * @param moving Whether the pipes move vertically
+    */
     PipePair(ImageView top, ImageView bottom, Rectangle topHitbox, Rectangle bottomHitbox, double baseY, boolean moving)
     {
         this.top = top;
@@ -129,8 +139,10 @@ public class Main extends Application
     private ArrayList<PipePair> pipes = new ArrayList<>();
 
     /**
-     * Launches the JavaFX application.
-     */
+    * Launches the JavaFX application.
+    *
+    * @param args command-line arguments
+    */
     public static void main(String[] args)
     {
         launch(args);
@@ -250,11 +262,14 @@ public class Main extends Application
     }
 
     /**
-     * Starts a new game session.
-     *
-     * @param pane Game pane
-     * @param playerName Player's name for leaderboard
-     */
+    * Starts a new game session.
+    *
+    * Resets all gameplay state, clears existing objects,
+    * applies difficulty settings, and starts the main game loop.
+    *
+    * @param pane game rendering pane
+    * @param playerName name used for leaderboard tracking
+    */
     private void startGame(Pane pane, String playerName)
     {
         if (timer != null) timer.stop();
