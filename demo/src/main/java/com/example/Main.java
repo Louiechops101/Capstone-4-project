@@ -20,82 +20,51 @@ import java.util.ArrayList;
 public class Main extends Application
 {
 
-    /** Indicates whether hard mode is enabled */
+   
     private boolean hardMode = false;
-
+    
     private ImageView activeShield;
-
-    /** Whether the player currently has a shield */
     private boolean hasShield = false;
-
-    /** Duration remaining for shield */
     private int shieldTimer = 0;
-
-    /** Duration remaining for invincibility after shield hit */
     private int invincibilityTimer = 0;
 
-    /** Background music clip */
     private Clip backgroundMusic;
 
-    /** Player character */
     private ImageView bird;
     private Image birdImage;
 
-    /** Power-up object (shield) */
     private ImageView powerUp;
     private Image shieldImage;
 
-    /** Vertical velocity of the bird */
     private double velocity = 0;
 
-    /** Death animation GIF */
     private ImageView deathGif;
 
-    /** Current score */
+  
     private int score = 0;
-
-    /** Score label UI */
     private Label scoreLabel;
-
-    /** Leaderboard UI */
     private ListView<String> highScores;
 
-    /** File for normal mode scores */
+   
     private final String NORMAL_FILE = "score.txt";
-
-    /** File for hard mode scores */
     private final String HARD_FILE = "hard_score.txt";
 
-    /** Frame counter for timing events */
+    
     private int frameCounter = 0;
 
     private Rectangle birdHitbox;
 
-    /** Game loop timer */
     private AnimationTimer timer;
 
-    /** Whether the game has started */
     private boolean gameStarted = false;
-
-    /** Whether the game is over */
     private boolean isGameOver = false;
 
-    /** Speed of pipes */
     private double pipeSpeed = 2.0;
-
-    /** Gap size between pipes */
     private double gapSize = 160;
-
-    /** Rate at which pipes spawn */
     private int spawnRate = 180;
-
-    /** Number of pipes passed */
     private int pipesPassed = 0;
 
-    /** Main game pane */
     private Pane gamePane;
-
-    
     private Image pipeBottomImage;
 
 
@@ -356,7 +325,7 @@ public class Main extends Application
         birdHitbox.setX(bird.getX() + 15);
         birdHitbox.setY(bird.getY() + 10);
 
-        // SPAWN PIPES
+       
         if (frameCounter % spawnRate == 0)
         {
             double gapStart = 20 + Math.random() * (paneHeight - gapSize - 40);
@@ -433,7 +402,7 @@ public class Main extends Application
             pane.getChildren().add(powerUp);
         }
 
-        // POWERUP MOVEMENT
+        
         if (powerUp != null)
         {
             powerUp.setX(powerUp.getX() - pipeSpeed);
@@ -464,7 +433,7 @@ public class Main extends Application
             }
         }
 
-        // TIMERS
+       
         if (hasShield)
         {
             shieldTimer--;
@@ -489,24 +458,10 @@ public class Main extends Application
             invincibilityTimer--;
         }
 
-        // FLASH EFFECT
-        if (hasShield)
-        {
-            bird.setStyle("-fx-fill: cyan;");
-        }
-        else if (invincibilityTimer > 0)
-        {
-            if (invincibilityTimer % 10 < 5)
-                bird.setStyle("-fx-fill: white;");
-            else
-                bird.setStyle("-fx-fill: cyan;");
-        }
-        else
-        {
-            bird.setStyle("");
-        }
+       
+       
 
-        // MOVE PIPES
+     
         for (int i = 0; i < pipes.size(); i++)
         {
             PipePair pair = pipes.get(i);
@@ -533,7 +488,7 @@ public class Main extends Application
             pair.bottom.setY(gapY + gapSize);
         }
 
-            // COLLISION
+         
             if (pair.topHitbox.getBoundsInParent().intersects(birdHitbox.getBoundsInParent())|| pair.bottomHitbox.getBoundsInParent().intersects(birdHitbox.getBoundsInParent()))
             {
                 if (hasShield || invincibilityTimer > 0)
@@ -559,7 +514,7 @@ public class Main extends Application
                 }
             }
 
-            // SCORE
+      
             if (pair.top.getX() + pair.top.getFitWidth() < bird.getX())
             {
                 if (pair.top.getProperties().get("scored") == null)
@@ -576,7 +531,7 @@ public class Main extends Application
             }
         }
 
-        // REMOVE PIPES
+     
         pipes.removeIf(pair -> {
             boolean remove = pair.top.getX() < -50;
             if (remove)
