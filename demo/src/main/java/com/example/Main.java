@@ -7,7 +7,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javax.sound.sampled.*;
@@ -24,8 +23,7 @@ public class Main extends Application
     /** Indicates whether hard mode is enabled */
     private boolean hardMode = false;
 
-    /** Power-up object (shield) */
-    private Circle powerUp;
+    private ImageView activeShield;
 
     /** Whether the player currently has a shield */
     private boolean hasShield = false;
@@ -40,7 +38,12 @@ public class Main extends Application
     private Clip backgroundMusic;
 
     /** Player character */
-    private Circle bird;
+    private ImageView bird;
+    private Image birdImage;
+
+    /** Power-up object (shield) */
+    private ImageView powerUp;
+    private Image shieldImage;
 
     /** Vertical velocity of the bird */
     private double velocity = 0;
@@ -65,6 +68,8 @@ public class Main extends Application
 
     /** Frame counter for timing events */
     private int frameCounter = 0;
+
+    private Rectangle birdHitbox;
 
     /** Game loop timer */
     private AnimationTimer timer;
@@ -142,6 +147,9 @@ public class Main extends Application
         
         pipeBottomImage = new Image(getClass().getResource("/com/example/pipe_bottom.png").toExternalForm());
 
+        birdImage = new Image(getClass().getResource("/com/example/bird.png").toExternalForm());
+        shieldImage = new Image(getClass().getResource("/com/example/shield.png").toExternalForm());
+
         gamePane = new Pane();
         gamePane.setPrefHeight(400);
 
@@ -150,7 +158,19 @@ public class Main extends Application
         clip.heightProperty().bind(gamePane.heightProperty());
         gamePane.setClip(clip);
 
-        bird = new Circle(50, 200, 15);
+         bird = new ImageView(birdImage);
+         bird.setPreserveRatio(true);
+         bird.setFitWidth(70);
+         bird.setFitHeight(55);
+         bird.setX(50);
+         bird.setY(200);
+
+         birdHitbox = new Rectangle();
+         birdHitbox.setWidth(30);
+         birdHitbox.setHeight(25);
+
+        birdHitbox.setVisible(false);
+        gamePane.getChildren().add(birdHitbox);
 
         scoreLabel = new Label("Score: 0");
         scoreLabel.setId("scoreLabel");
@@ -248,7 +268,7 @@ public class Main extends Application
         pane.getChildren().clear();
         pipes.clear();
 
-        bird.setCenterY(200);
+        bird.setY(200);
         velocity = 0;
 
         pane.getChildren().add(bird);
@@ -303,11 +323,23 @@ public class Main extends Application
         if (gameStarted)
         {
             velocity += hardMode ? 0.25 : 0.17;
-            bird.setCenterY(bird.getCenterY() + velocity);
+            bird.setY(bird.getY() + velocity);
+
+            
+            bird.setRotate(velocity * 3);
         }
 
         double paneHeight = pane.getHeight();
         double paneWidth = pane.getWidth();
+
+        if (activeShield != null)
+        {
+            activeShield.setX(bird.getX() - 10);
+            activeShield.setY(bird.getY() - 10);
+        }
+
+        birdHitbox.setX(bird.getX() + 15);
+        birdHitbox.setY(bird.getY() + 10);
 
         // SPAWN PIPES
         if (frameCounter % spawnRate == 0)
@@ -376,33 +408,41 @@ public class Main extends Application
 
         if (powerUp == null && Math.random() < 0.001) // ~random spawn chance
         {
-    
-            powerUp = new Circle(10);
-            powerUp.setCenterX(pane.getWidth());
+            powerUp = new ImageView(shieldImage);
+            powerUp.setFitWidth(35);
+            powerUp.setFitHeight(35);
 
-            // spawn in safe vertical range
-            powerUp.setCenterY(50 + Math.random() * (paneHeight - 100));
+            powerUp.setX(paneWidth);
+            powerUp.setY(50 + Math.random() * (paneHeight - 100));
 
-            powerUp.setStyle("-fx-fill: gold;");
-
-            gamePane.getChildren().add(powerUp);
+            pane.getChildren().add(powerUp);
         }
 
         // POWERUP MOVEMENT
         if (powerUp != null)
         {
-            powerUp.setCenterX(powerUp.getCenterX() - pipeSpeed);
+            powerUp.setX(powerUp.getX() - pipeSpeed);
 
             if (powerUp.getBoundsInParent().intersects(bird.getBoundsInParent()))
             {
                 hasShield = true;
                 shieldTimer = 220;
 
+                activeShield = new ImageView(shieldImage);
+                activeShield.setFitWidth(70);
+                activeShield.setFitHeight(70);
+                activeShield.setPreserveRatio(true);
+
+                pane.getChildren().add(activeShield);
+
+                activeShield.toFront();
+                bird.toFront();
+
                 pane.getChildren().remove(powerUp);
                 powerUp = null;
             }
 
-            if (powerUp != null && powerUp.getCenterX() < -20)
+            if (powerUp != null && powerUp.getX() < -20)
             {
                 pane.getChildren().remove(powerUp);
                 powerUp = null;
@@ -413,7 +453,20 @@ public class Main extends Application
         if (hasShield)
         {
             shieldTimer--;
-            if (shieldTimer <= 0) hasShield = false;
+             if (shieldTimer < 60 && activeShield != null)
+             {
+                activeShield.setVisible(shieldTimer % 10 < 5);
+             }
+             if(shieldTimer <= 0)
+             {
+                hasShield = false;
+
+                if(activeShield != null)
+                {
+                    pane.getChildren().remove(activeShield);
+                    activeShield = null;
+                }
+             }
         }
 
         if (invincibilityTimer > 0)
@@ -466,12 +519,18 @@ public class Main extends Application
         }
 
             // COLLISION
-            if (pair.topHitbox.getBoundsInParent().intersects(bird.getBoundsInParent())|| pair.bottomHitbox.getBoundsInParent().intersects(bird.getBoundsInParent()))
+            if (pair.topHitbox.getBoundsInParent().intersects(birdHitbox.getBoundsInParent())|| pair.bottomHitbox.getBoundsInParent().intersects(birdHitbox.getBoundsInParent()))
             {
                 if (hasShield || invincibilityTimer > 0)
                 {
                     hasShield = false;
                     invincibilityTimer = 120;
+
+                    if (activeShield != null)
+                    {
+                        pane.getChildren().remove(activeShield);
+                        activeShield = null;
+                    }
 
                     pane.getChildren().removeAll(pair.top, pair.bottom);
                     pipes.remove(i);
@@ -486,7 +545,7 @@ public class Main extends Application
             }
 
             // SCORE
-            if (pair.top.getX() + pair.top.getFitWidth() < bird.getCenterX())
+            if (pair.top.getX() + pair.top.getFitWidth() < bird.getX())
             {
                 if (pair.top.getProperties().get("scored") == null)
                 {
@@ -512,7 +571,7 @@ public class Main extends Application
             return remove;
         });
 
-        if (bird.getCenterY() > paneHeight || bird.getCenterY() < 0)
+        if (bird.getY() > paneHeight || bird.getY() < 0)
         {
             gameOver(playerName);
         }
@@ -705,8 +764,8 @@ public class Main extends Application
             deathGif.setFitWidth(200);
             deathGif.setFitHeight(200);
 
-            deathGif.setX(bird.getCenterX() - 100);
-            deathGif.setY(bird.getCenterY() - 100);
+            deathGif.setX(bird.getX() - 100);
+            deathGif.setY(bird.getY() - 100);
 
             gamePane.getChildren().add(deathGif);
 

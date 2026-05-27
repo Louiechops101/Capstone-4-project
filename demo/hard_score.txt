@@ -1,3 +1,5 @@
 Louis  : 0
  Louis: 8
 hi: 3
+hi[: 1
+KJ: 2
