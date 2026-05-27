@@ -390,7 +390,7 @@ public class Main extends Application
             pane.getChildren().addAll(topPipe, bottomPipe);
         }
 
-        if (powerUp == null && Math.random() < 0.001) // ~random spawn chance
+        if (powerUp == null && Math.random() < 0.001) 
         {
             powerUp = new ImageView(shieldImage);
             powerUp.setFitWidth(35);
