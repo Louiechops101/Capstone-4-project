@@ -3,3 +3,4 @@ Louis  : 0
 hi: 3
 hi[: 1
 KJ: 2
+Ricky: 1

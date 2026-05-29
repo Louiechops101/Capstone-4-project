@@ -1,0 +1,61 @@
+
+
+/* Root background */
+.root {
+    -fx-background-color: linear-gradient(to bottom, #87CEEB, #e0f7ff);
+    -fx-font-family: "Arial";
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-padding: 8 16;
+    -fx-font-size: 14px;
+}
+
+.button:hover {
+    -fx-background-color: #45a049;
+}
+
+/* Special buttons (optional later) */
+#modeButton {
+    -fx-background-color: #ff9800;
+}
+
+#resetButton {
+    -fx-background-color: #f44336;
+}
+
+/* Labels */
+.label {
+    -fx-text-fill: #333;
+    -fx-font-size: 14px;
+}
+
+#scoreLabel {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* Leaderboard */
+.list-view {
+    -fx-background-color: white;
+    -fx-border-color: #ccc;
+}
+
+/* Text field */
+.text-field {
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #aaa;
+}
+
+/* Game pane */
+.pane {
+    -fx-background-color: #d0f0ff;
+    -fx-border-color: black;
+
+}
+

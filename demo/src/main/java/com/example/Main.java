@@ -107,15 +107,8 @@ public class Main extends Application
      /** List of active pipes */
     private ArrayList<PipePair> pipes = new ArrayList<>();
 
-    /**
-    * Launches the JavaFX application.
-    *
-    * @param args command-line arguments
-    */
-    public static void main(String[] args)
-    {
-        launch(args);
-    }
+    
+   
      
     /**
      * Initializes the UI and sets up event handlers.
@@ -126,10 +119,9 @@ public class Main extends Application
     public void start(Stage stage)
     {
         
-        pipeBottomImage = new Image(getClass().getResource("/com/example/pipe_bottom.png").toExternalForm());
-
-        birdImage = new Image(getClass().getResource("/com/example/bird.png").toExternalForm());
-        shieldImage = new Image(getClass().getResource("/com/example/shield.png").toExternalForm());
+        pipeBottomImage = new Image(getClass().getResourceAsStream("/com/example/pipe_bottom.png"));
+        birdImage = new Image(getClass().getResourceAsStream("/com/example/bird.png"));
+        shieldImage = new Image(getClass().getResourceAsStream("/com/example/shield.png"));
 
         gamePane = new Pane();
         gamePane.setPrefHeight(400);
@@ -211,7 +203,7 @@ public class Main extends Application
         VBox.setVgrow(gamePane, Priority.ALWAYS);
 
         Scene scene = new Scene(root, 500, 700);
-        scene.getStylesheets().add(getClass().getResource("style.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/com/example/style.css").toExternalForm());
 
         gamePane.setFocusTraversable(true);
 
@@ -681,7 +673,12 @@ public class Main extends Application
     {
         try
         {
-            AudioInputStream audio = AudioSystem.getAudioInputStream(new File("Save your grace.wav"));
+           InputStream audioSrc = getClass().getResourceAsStream("/com/example/Save your grace.wav");
+        
+            
+            InputStream bufferedIn = new BufferedInputStream(audioSrc);
+            AudioInputStream audio = AudioSystem.getAudioInputStream(bufferedIn);
+
             backgroundMusic = AudioSystem.getClip();
             backgroundMusic.open(audio);
             backgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
@@ -710,7 +707,10 @@ public class Main extends Application
     {
         try
         {
-            AudioInputStream audio = AudioSystem.getAudioInputStream(new File("death.wav"));
+            InputStream audioSrc = getClass().getResourceAsStream("/com/example/death.wav");
+            InputStream bufferedIn = new BufferedInputStream(audioSrc);
+            AudioInputStream audio = AudioSystem.getAudioInputStream(bufferedIn);
+
             Clip clip = AudioSystem.getClip();
             clip.open(audio);
             clip.start();
@@ -728,7 +728,7 @@ public class Main extends Application
     {
         try
         {
-            Image gif = new Image("file:death.gif");
+            Image gif = new Image(getClass().getResourceAsStream("/com/example/death.gif"));
 
             deathGif = new ImageView(gif);
             deathGif.setFitWidth(200);
